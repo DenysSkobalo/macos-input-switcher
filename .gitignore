@@ -1,0 +1,26 @@
+# Build artifacts
+build/
+my_utility
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Backup files
+*~
+*.swp
+*.swo
+*.bak
+
+# Temporary files
+*.tmp
+*.log
+
+# CMake or other build systems
+CMakeFiles/
+CMakeCache.txt
+
+# IDE/editor specific
+.vscode/
+.idea/
