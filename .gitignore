@@ -52,3 +52,4 @@ CMakeCache.txt
 # Shell / script temporary files
 # ------------------------
 *.sh~
+.cache/
