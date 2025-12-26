@@ -1,5 +1,5 @@
-#ifndef RULES_H
-#define RULES_H
+#ifndef RULES_MANAGER_H
+#define RULES_MANAGER_H
 
 #include <stddef.h>
 

@@ -3,9 +3,9 @@ APP_BUNDLE    := $(APP_NAME).app
 APP_EXEC      := mis
 
 CC            := clang
-CFLAGS        := -Wall -Wextra -Iinclude
-OBJCFLAGS     := -Wall -Wextra -Iinclude -ObjC
-LDFLAGS       := -framework Cocoa
+CFLAGS        := -Wall -Wextra -Iinclude -O2
+OBJCFLAGS     := -Wall -Wextra -Iinclude -ObjC -O2
+LDFLAGS       := -framework Cocoa -framework IOKit -framework Carbon
 
 SRC_DIR       := src
 BUILD_DIR     := build
@@ -18,6 +18,8 @@ OBJ_OBJC      := $(patsubst $(SRC_DIR)/%.m,$(BUILD_DIR)/%.o,$(SRC_OBJC))
 
 OBJS          := $(OBJ_C) $(OBJ_OBJC)
 
+DEPS          := $(OBJS:.o=.d)
+
 .PHONY: all clean mis agent run
 
 all: agent
@@ -25,12 +27,15 @@ all: agent
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-# ---------- Compile ----------
+# ---------- Compile C ----------
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
+# ---------- Compile Obj-C ----------
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.m | $(BUILD_DIR)
-	$(CC) $(OBJCFLAGS) -c $< -o $@
+	$(CC) $(OBJCFLAGS) -MMD -MP -c $< -o $@
+
+-include $(DEPS)
 
 # ---------- Link ----------
 mis: $(OBJS)
@@ -47,11 +52,15 @@ agent: mis
 
 	chmod +x $(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)
 
-	chmod +x ./generate_plist.sh
-	./generate_plist.sh $(APP_BUNDLE) $(APP_EXEC)
+	if [ -x ./generate_plist.sh ]; then \
+		chmod +x ./generate_plist.sh; \
+		./generate_plist.sh $(APP_BUNDLE) $(APP_EXEC); \
+	else \
+		echo "[WARN] generate_plist.sh not found or not executable"; \
+	fi
 
 # ---------- Run ----------
-run:
+run: agent
 	./$(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)
 
 # ---------- Clean ----------

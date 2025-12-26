@@ -1,4 +1,5 @@
 #import <Cocoa/Cocoa.h>
+#import "layout_switcher.h"
 
 int startApplicationActivityAgent() {
     @autoreleasepool {
@@ -9,11 +10,14 @@ int startApplicationActivityAgent() {
                                                                           queue:[NSOperationQueue mainQueue]
                                                                      usingBlock:^(NSNotification *note) {
             NSRunningApplication *activeApp = note.userInfo[NSWorkspaceApplicationKey];
-            NSLog(@"Active application: %@", activeApp.localizedName);
+            NSString *appName = activeApp.localizedName;
+            if (appName) {
+                layout_switcher_on_active_app_changed([appName UTF8String]);
+            }
         }];
 
         NSLog(@"Agent started. Watching active applications...");
-        [app run]; 
+        [app run];
     }
     return 0;
 }

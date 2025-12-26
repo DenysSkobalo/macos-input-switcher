@@ -9,6 +9,8 @@ auto-detected-app
 
 # Compile database
 compile_commands.json
+all_files.txt
+diff.txt
 
 # ------------------------
 # macOS system files
