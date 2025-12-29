@@ -21,7 +21,7 @@ void layout_switcher_init(RulesConfig *cfg) {
   ruleEntries = (RuleEntry *)calloc(ruleCount, sizeof(RuleEntry));
 
   for (size_t i = 0; i < ruleCount; i++) {
-    ruleEntries[i].appName = strdup(cfg->rules[i].AppName);
+    ruleEntries[i].appName = strdup(cfg->rules[i].app_name);
     ruleEntries[i].layout = strdup(cfg->rules[i].layout);
   }
 

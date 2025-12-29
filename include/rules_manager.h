@@ -7,8 +7,12 @@
 extern "C" {
 #endif
 
+#define RULES "rules"
+#define APP "app"
+#define LAYOUT "layout"
+
 typedef struct {
-  char *AppName;
+  char *app_name;
   char *layout;
 } AppRule;
 
@@ -17,10 +21,8 @@ typedef struct {
   size_t rule_count;
 } RulesConfig;
 
-char *read_file_to_string(const char *path);
 RulesConfig *rules_load_from_file(const char *path);
-void rules_free(RulesConfig *config);
-
+void print_parsed_rules(RulesConfig *cfg);
 #ifdef __cplusplus
 }
 #endif

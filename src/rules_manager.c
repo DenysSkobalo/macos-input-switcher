@@ -1,63 +1,21 @@
 #include "rules_manager.h"
-#include <ctype.h>
+#include "file_utils.h"
+#include "parser_json.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static char *extract_next_quoted_key(const char **p) {
-  if (!p || !*p)
-    return NULL;
-  const char *start = strchr(*p, '"');
-  if (!start)
-    return NULL;
-  const char *end = strchr(start + 1, '"');
-  if (!end)
-    return NULL;
+static void parse_rule_array(Parser *p, RulesConfig *cfg);
+static void parse_rule_object(Parser *p, RulesConfig *cfg);
 
-  size_t len = end - start - 1;
-  char *key = (char *)malloc(len + 1);
-  strncpy(key, start + 1, len);
-  key[len] = '\0';
-
-  *p = end + 1;
-  return key;
-}
-
-static char *extract_next_quoted_value(const char **p) {
-  if (!p || !*p)
-    return NULL;
-  const char *start = strchr(*p, '"');
-  if (!start)
-    return NULL;
-  const char *end = strchr(start + 1, '"');
-  if (!end)
-    return NULL;
-
-  size_t len = end - start - 1;
-  char *val = (char *)malloc(len + 1);
-  strncpy(val, start + 1, len);
-  val[len] = '\0';
-
-  *p = end + 1;
-  return val;
-}
-
-char *read_file_to_string(const char *path) {
-  FILE *fp = fopen(path, "rb");
-  if (!fp)
-    return NULL;
-  fseek(fp, 0, SEEK_END);
-  long size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  char *buffer = (char *)malloc(size + 1);
-  if (!buffer) {
-    fclose(fp);
-    return NULL;
+void print_parsed_rules(RulesConfig *cfg) {
+  if (!cfg)
+    return;
+  printf("Parsed rules (%zu):\n", cfg->rule_count);
+  for (size_t i = 0; i < cfg->rule_count; i++) {
+    printf("  AppName: '%s', Layout: '%s'\n", cfg->rules[i].app_name,
+           cfg->rules[i].layout);
   }
-  fread(buffer, 1, size, fp);
-  fclose(fp);
-  buffer[size] = '\0';
-  return buffer;
 }
 
 RulesConfig *rules_load_from_file(const char *path) {
@@ -69,66 +27,91 @@ RulesConfig *rules_load_from_file(const char *path) {
   cfg->rules = NULL;
   cfg->rule_count = 0;
 
-  const char *p = content;
+  Parser parser;
+  parser_init(&parser, content);
+  parser_expect(&parser, TOKEN_LBRACE);
 
-  const char *rules_pos = strstr(p, "\"rules\"");
-  if (rules_pos) {
-    const char *arr_start = strchr(rules_pos, '[');
-    const char *arr_end = strchr(rules_pos, ']');
-    if (arr_start && arr_end) {
-      const char *curr = arr_start + 1;
-      while (curr < arr_end) {
-        const char *obj_start = strchr(curr, '{');
-        const char *obj_end = strchr(curr, '}');
-        if (!obj_start || !obj_end || obj_start > obj_end)
-          break;
+  while (parser.current.type != TOKEN_RBRACE &&
+         parser.current.type != TOKEN_EOF) {
+    if (parser.current.type == TOKEN_STRING) {
+      const char *key_start = parser.current.start;
+      size_t key_len = parser.current.length;
 
-        const char *inner = obj_start + 1;
-        char *app = NULL, *layout = NULL;
-        while (inner < obj_end) {
-          char *key = extract_next_quoted_key(&inner);
-          char *value = extract_next_quoted_value(&inner);
-          if (key && value) {
-            if (strcmp(key, "app") == 0)
-              app = value;
-            else if (strcmp(key, "layout") == 0)
-              layout = value;
-            else
-              free(value);
-            free(key);
-          } else {
-            free(key);
-            free(value);
-          }
-        }
+      parser_advance(&parser);
+      parser_expect(&parser, TOKEN_COLON);
 
-        if (app && layout) {
-          cfg->rules = (AppRule *)realloc(
-              cfg->rules, sizeof(AppRule) * (cfg->rule_count + 1));
-          cfg->rules[cfg->rule_count].AppName = app;
-          cfg->rules[cfg->rule_count].layout = layout;
-          cfg->rule_count++;
-        } else {
-          free(app);
-          free(layout);
-        }
-
-        curr = obj_end + 1;
+      if (key_len == strlen(RULES) && strncmp(key_start, RULES, key_len) == 0) {
+        parse_rule_array(&parser, cfg);
+      } else {
+        parser_advance(&parser);
       }
+    } else {
+      parser_advance(&parser);
     }
+
+    if (parser.current.type == TOKEN_COMMA)
+      parser_advance(&parser);
   }
+
+  parser_expect(&parser, TOKEN_RBRACE);
 
   free(content);
   return cfg;
 }
 
-void rules_free(RulesConfig *config) {
-  if (!config)
-    return;
-  for (size_t i = 0; i < config->rule_count; i++) {
-    free(config->rules[i].AppName);
-    free(config->rules[i].layout);
+static void parse_rule_array(Parser *p, RulesConfig *cfg) {
+  parser_expect(p, TOKEN_LBRACKET);
+  while (p->current.type != TOKEN_RBRACKET && p->current.type != TOKEN_EOF) {
+    parse_rule_object(p, cfg);
+    if (p->current.type == TOKEN_COMMA) {
+      parser_advance(p);
+    }
   }
-  free(config->rules);
-  free(config);
+  parser_expect(p, TOKEN_RBRACKET);
+}
+
+static void parse_rule_object(Parser *p, RulesConfig *cfg) {
+  parser_expect(p, TOKEN_LBRACE);
+
+  char *app_name = NULL;
+  char *layout = NULL;
+
+  while (p->current.type != TOKEN_RBRACE && p->current.type != TOKEN_EOF) {
+    if (p->current.type == TOKEN_STRING) {
+      size_t key_len = p->current.length;
+      char *key = strndup(p->current.start, key_len);
+      parser_advance(p);
+      parser_expect(p, TOKEN_COLON);
+
+      if (p->current.type == TOKEN_STRING) {
+        char *value = strndup(p->current.start, p->current.length);
+        if (key_len == strlen(APP) && strncmp(key, APP, key_len) == 0)
+          app_name = value;
+        else if (key_len == strlen(LAYOUT) &&
+                 strncmp(key, LAYOUT, key_len) == 0)
+          layout = value;
+        else
+          free(value);
+        parser_advance(p);
+      }
+      free(key);
+    } else {
+      parser_advance(p);
+    }
+
+    if (p->current.type == TOKEN_COMMA)
+      parser_advance(p);
+  }
+  parser_expect(p, TOKEN_RBRACE);
+
+  if (app_name && layout) {
+    cfg->rules =
+        (AppRule *)realloc(cfg->rules, sizeof(AppRule) * (cfg->rule_count + 1));
+    cfg->rules[cfg->rule_count].app_name = app_name;
+    cfg->rules[cfg->rule_count].layout = layout;
+    cfg->rule_count++;
+  } else {
+    free(app_name);
+    free(layout);
+  }
 }

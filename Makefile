@@ -52,7 +52,7 @@ agent: mis
 
 	chmod +x $(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)
 
-	if [ -x ./generate_plist.sh ]; then \
+	@if [ -x ./generate_plist.sh ]; then \
 		chmod +x ./generate_plist.sh; \
 		./generate_plist.sh $(APP_BUNDLE) $(APP_EXEC); \
 	else \
