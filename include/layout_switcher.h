@@ -9,6 +9,7 @@ extern "C" {
 
 void layout_switcher_init(RulesConfig *cfg);
 void layout_switcher_on_active_app_changed(const char *appName);
+void layout_switcher_reload_rules(RulesConfig *cfg);
 void layout_switcher_free(void);
 
 #ifdef __cplusplus

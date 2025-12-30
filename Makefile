@@ -1,68 +1,58 @@
-APP_NAME      := MIS
-APP_BUNDLE    := $(APP_NAME).app
-APP_EXEC      := mis
+APP_NAME        := MIS
+APP_BUNDLE      := $(APP_NAME).app
+APP_EXECUTABLE  := mis
 
-CC            := clang
-CFLAGS        := -Wall -Wextra -Iinclude -O2
-OBJCFLAGS     := -Wall -Wextra -Iinclude -ObjC -O2
-LDFLAGS       := -framework Cocoa -framework IOKit -framework Carbon
+CC              := clang
+CFLAGS          := -Wall -Wextra -Iinclude -O2
+OBJCFLAGS       := -Wall -Wextra -Iinclude -ObjC -O2
+LDFLAGS         := -framework Cocoa -framework IOKit -framework Carbon
 
-SRC_DIR       := src
-BUILD_DIR     := build
+SRC_DIR         := src
+BUILD_DIR       := build
 
-SRC_C         := $(wildcard $(SRC_DIR)/*.c)
-SRC_OBJC      := $(wildcard $(SRC_DIR)/*.m)
+C_SOURCES       := $(wildcard $(SRC_DIR)/**/*.c) $(wildcard $(SRC_DIR)/*.c)
+OBJC_SOURCES    := $(wildcard $(SRC_DIR)/**/*.m)
 
-OBJ_C         := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_C))
-OBJ_OBJC      := $(patsubst $(SRC_DIR)/%.m,$(BUILD_DIR)/%.o,$(SRC_OBJC))
+C_OBJS          := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
+OBJC_OBJS       := $(patsubst $(SRC_DIR)/%.m,$(BUILD_DIR)/%.o,$(OBJC_SOURCES))
+OBJECTS         := $(C_OBJS) $(OBJC_OBJS)
 
-OBJS          := $(OBJ_C) $(OBJ_OBJC)
+DEPS            := $(OBJECTS:.o=.d)
 
-DEPS          := $(OBJS:.o=.d)
+.PHONY: all clean build link run
 
-.PHONY: all clean mis agent run
-
-all: agent
+all: build_app
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-# ---------- Compile C ----------
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
-# ---------- Compile Obj-C ----------
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.m | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(OBJCFLAGS) -MMD -MP -c $< -o $@
 
 -include $(DEPS)
 
-# ---------- Link ----------
-mis: $(OBJS)
-	$(CC) $^ $(LDFLAGS) -o $(BUILD_DIR)/$(APP_EXEC)
+link: $(OBJECTS)
+	$(CC) $^ $(LDFLAGS) -o $(BUILD_DIR)/$(APP_EXECUTABLE)
 
-# ---------- macOS Utility Agent ----------
-agent: mis
+build_app: link
 	rm -rf $(APP_BUNDLE)
 	mkdir -p $(APP_BUNDLE)/Contents/MacOS
-	mkdir -p $(APP_BUNDLE)/Contents
-
-	cp $(BUILD_DIR)/$(APP_EXEC) \
-	   $(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)
-
-	chmod +x $(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)
-
+	cp $(BUILD_DIR)/$(APP_EXECUTABLE) $(APP_BUNDLE)/Contents/MacOS/$(APP_EXECUTABLE)
+	chmod +x $(APP_BUNDLE)/Contents/MacOS/$(APP_EXECUTABLE)
 	@if [ -x ./generate_plist.sh ]; then \
 		chmod +x ./generate_plist.sh; \
-		./generate_plist.sh $(APP_BUNDLE) $(APP_EXEC); \
+		./generate_plist.sh $(APP_BUNDLE) $(APP_EXECUTABLE); \
 	else \
 		echo "[WARN] generate_plist.sh not found or not executable"; \
 	fi
 
-# ---------- Run ----------
-run: agent
-	./$(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)
+run: build_app
+	./$(APP_BUNDLE)/Contents/MacOS/$(APP_EXECUTABLE)
 
-# ---------- Clean ----------
 clean:
 	rm -rf $(BUILD_DIR) $(APP_BUNDLE)

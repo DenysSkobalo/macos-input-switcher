@@ -5,8 +5,10 @@
 extern "C" {
 #endif
 
-// Starts macOS background agent that monitors active applications.
-int startApplicationActivityAgent();
+typedef void (*active_app_callback_t)(const char *appName);
+
+int agent_active_app_start(active_app_callback_t callback);
+void agent_active_app_stop(void);
 
 #ifdef __cplusplus
 }

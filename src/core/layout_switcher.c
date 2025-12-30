@@ -13,6 +13,11 @@ static RuleEntry *ruleEntries = NULL;
 static size_t ruleCount = 0;
 static char *currentLayout = NULL;
 
+static const char *get_system_layout(void) {
+  const char *id = get_active_input_source_id();
+  return id;
+}
+
 void layout_switcher_init(RulesConfig *cfg) {
   if (!cfg || cfg->rule_count == 0)
     return;
@@ -34,22 +39,21 @@ void layout_switcher_on_active_app_changed(const char *appName) {
   if (!appName || !ruleEntries)
     return;
 
+  const char *systemLayout = get_system_layout();
+
   for (size_t i = 0; i < ruleCount; i++) {
     if (strcmp(appName, ruleEntries[i].appName) == 0) {
-      if (strcmp(currentLayout, ruleEntries[i].layout) != 0) {
+
+      if (strcmp(systemLayout, ruleEntries[i].layout) != 0) {
         if (switch_input_source(ruleEntries[i].layout)) {
-          free(currentLayout);
-          currentLayout = strdup(ruleEntries[i].layout);
-          printf("[LayoutSwitcher] Switched layout for %s -> %s\n", appName,
-                 currentLayout);
-        } else {
-          fprintf(stderr, "[LayoutSwitcher] Failed to switch layout for %s\n",
-                  appName);
+          printf("[LayoutSwitcher] %s → %s\n", appName, ruleEntries[i].layout);
         }
       }
       break;
     }
   }
+
+  free((void *)systemLayout);
 }
 
 void layout_switcher_free(void) {
@@ -65,4 +69,9 @@ void layout_switcher_free(void) {
     free(currentLayout);
     currentLayout = NULL;
   }
+}
+
+void layout_switcher_reload_rules(RulesConfig *cfg) {
+  layout_switcher_free();
+  layout_switcher_init(cfg);
 }
