@@ -5,7 +5,7 @@
 #import <IOKit/hid/IOHIDManager.h>
 #import "agent_keyboard.h"
 
-void listInputSources() {
+void listInputSources(void) {
     CFArrayRef sources = TISCreateInputSourceList(NULL, false);
     for (CFIndex i = 0; i < CFArrayGetCount(sources); i++) {
         TISInputSourceRef source = (TISInputSourceRef)CFArrayGetValueAtIndex(sources, i);

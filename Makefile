@@ -1,58 +1,43 @@
-APP_NAME        := MIS
-APP_BUNDLE      := $(APP_NAME).app
-APP_EXECUTABLE  := mis
+APP_NAME       := TrackMyLayoutCLI
+APP_EXECUTABLE := $(APP_NAME)
 
-CC              := clang
-CFLAGS          := -Wall -Wextra -Iinclude -O2
-OBJCFLAGS       := -Wall -Wextra -Iinclude -ObjC -O2
-LDFLAGS         := -framework Cocoa -framework IOKit -framework Carbon
+CC             := clang
+CFLAGS         := -Wall -Wextra -O2 -ITrackMyLayoutApp/TrackMyLayoutApp/include
+OBJCFLAGS      := -Wall -Wextra -O2 -ObjC -ITrackMyLayoutApp/TrackMyLayoutApp/include
+LDFLAGS        := -framework Cocoa -framework IOKit -framework Carbon
 
-SRC_DIR         := src
-BUILD_DIR       := build
+BUILD_DIR      := build
+SRC_DIR        := TrackMyLayoutApp/TrackMyLayoutApp/src
 
-C_SOURCES       := $(wildcard $(SRC_DIR)/**/*.c) $(wildcard $(SRC_DIR)/*.c)
-OBJC_SOURCES    := $(wildcard $(SRC_DIR)/**/*.m)
+C_SOURCES      := main.c \
+                $(wildcard $(SRC_DIR)/*.c)
+OBJC_SOURCES   := $(wildcard $(SRC_DIR)/*.m)
 
-C_OBJS          := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
-OBJC_OBJS       := $(patsubst $(SRC_DIR)/%.m,$(BUILD_DIR)/%.o,$(OBJC_SOURCES))
-OBJECTS         := $(C_OBJS) $(OBJC_OBJS)
+C_OBJS         := $(patsubst %.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
+OBJC_OBJS      := $(patsubst %.m,$(BUILD_DIR)/%.o,$(OBJC_SOURCES))
+OBJECTS        := $(C_OBJS) $(OBJC_OBJS)
 
-DEPS            := $(OBJECTS:.o=.d)
+DEPS := $(OBJECTS:.o=.d)
 
-.PHONY: all clean build link run
+.PHONY: all clean run
 
-all: build_app
+all: $(BUILD_DIR)/$(APP_EXECUTABLE)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.m | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.m | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(CC) $(OBJCFLAGS) -MMD -MP -c $< -o $@
 
+$(BUILD_DIR)/$(APP_EXECUTABLE): $(OBJECTS)
+	$(CC) $^ $(LDFLAGS) -o $@
+
 -include $(DEPS)
 
-link: $(OBJECTS)
-	$(CC) $^ $(LDFLAGS) -o $(BUILD_DIR)/$(APP_EXECUTABLE)
-
-build_app: link
-	rm -rf $(APP_BUNDLE)
-	mkdir -p $(APP_BUNDLE)/Contents/MacOS
-	cp $(BUILD_DIR)/$(APP_EXECUTABLE) $(APP_BUNDLE)/Contents/MacOS/$(APP_EXECUTABLE)
-	chmod +x $(APP_BUNDLE)/Contents/MacOS/$(APP_EXECUTABLE)
-	@if [ -x ./generate_plist.sh ]; then \
-		chmod +x ./generate_plist.sh; \
-		./generate_plist.sh $(APP_BUNDLE) $(APP_EXECUTABLE); \
-	else \
-		echo "[WARN] generate_plist.sh not found or not executable"; \
-	fi
-
-run: build_app
-	./$(APP_BUNDLE)/Contents/MacOS/$(APP_EXECUTABLE)
-
 clean:
-	rm -rf $(BUILD_DIR) $(APP_BUNDLE)
+	rm -rf $(BUILD_DIR)

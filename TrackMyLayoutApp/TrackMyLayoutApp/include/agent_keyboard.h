@@ -22,8 +22,8 @@ const char *get_active_input_source_name(void);
 KeyboardInfo *list_connected_keyboards(size_t *count);
 void free_keyboard_info_array(KeyboardInfo *infos, size_t count);
 
-void listInputSources();
-void currentKeyboardInputSource();
+void listInputSources(void);
+void currentKeyboardInputSource(void);
 
 int switch_input_source(const char *inputSourceID);
 

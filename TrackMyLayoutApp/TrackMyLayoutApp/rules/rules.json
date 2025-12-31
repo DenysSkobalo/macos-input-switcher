@@ -1,0 +1,8 @@
+{
+  "rules": [
+    {"app": "kitty", "layout": "com.apple.keylayout.ABC"},
+    {"app": "Telegram", "layout": "com.apple.keylayout.Ukrainian-PC"},
+    {"app": "ChatGPT", "layout": "com.apple.keylayout.Ukrainian-PC"},
+    {"app": "Google Chrome", "layout": "com.apple.keylayout.ABC"}
+  ]
+}
